@@ -69,13 +69,18 @@ fit1 <- survfit(Surv(age,censor) ~ treat, data = df2)
                     conf.int = FALSE,
                     linetype = c( "twodash", "longdash", "solid"),
                     legend.labs= c("L (20% SYA)", "M (100% SYA)", "H (120% SYA)"),
-                    ggtheme = theme_classic2(base_size=8),
+                    ggtheme = theme_classic2(base_size=12),
                     font.family = "Arial",
                     palette = c("#D55E00", "#0072B2", "#56B4E9"))+
   labs(Title = FALSE, x = "Time (days since eclosion)", y = "Proportion alive"))
 
 
 ggsave('plot_survival.png', plot1$plot, width = 16, height = 10, units = "cm") #Note. important when using ggave for ggsurvplot objects to specify the '$plot', as ggsurvplot produces a plot and a list, and ggsave is not able to interpret both together
+
+#To make figure panel
+ggsave('plot_survival.svg', plot1$plot, width = 16, height = 8, units = "cm") #Note. important when using ggave for ggsurvplot objects to specify the '$plot', as ggsurvplot produces a plot and a list, and ggsave is not able to interpret both together
+
+
 
 ##############################2.0 test Cox P assumptions###########################################
 
@@ -161,7 +166,7 @@ AIC(coxmodel1,coxmodel5)#no difference when source population is included as a r
 
 #From all of these tests it looks like model 1 is the best model
 
-###Effects when thorax is partitioned into early and late deaths
+###Effects when data is partitioned into early and late deaths
 
 #We can also partition the model into two parts, part 1 where most of the individuals stay alive, with a few deaths, and part 2 the main death phase. This was done because it looked like (from the figure) there was a treatment specific difference in deaths in the first part of the experiment
 
@@ -176,3 +181,57 @@ summary(coxmodel6)
 coxmodel7 <- coxph(Surv(age,censor3) ~ treat, data = df) #Builds the Coxph model where age is modelled against the larval treatment
 summary(coxmodel7)
 #This test shows that there was no effect of treatment on survival, the 20% and 120% treatments did not differ signficantly from the 100% treatment (coxph: z = -0.718, p = 0.473; z = -1.367, p =  0.172 respectively)
+
+###Was asked by reviewer to calculate mortality rate over time:
+
+#For this load in a new df with mortality and survivorship data per day
+df3 <- read_csv("NER0008751_Obj3_Exp3_mortality_rate.csv")
+
+#Filter all values where the number alive at the end of the day is 0 (i.e., the day the last fly died in each treatment)
+df4 <-   df3 %>% 
+  filter (number_alive > 0)
+
+
+# Calculate the mortality rate for each day
+df4$mortality_rate <- df4$number_dead / (df4$number_alive + df4$number_dead)
+
+# Calculate mux using the natural log of the mortality rate
+df4$mux <- -log(1 - df4$mortality_rate)
+
+#Make a new natural log of mux
+df4$logmux <- log(df4$mux)
+
+
+#Plot mortality rate against age
+mort.rate.figure <- ggplot(df4, aes(x = day, y = logmux, colour = treatment, group = treatment)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Age", y = bquote('Mortality rate ('*mu[x]~')'), colour = 'Larval diet')+
+  scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+  theme_classic()
+
+ggsave("Mortality rate.png", mort.rate.figure, width = 16, height = 10, units = "cm")
+
+
+#Mortality analysis
+mort.model <- lm(mux ~ treatment*day, data = df4)
+
+
+autoplot(mort.model) # Assumptions violated
+
+mort.model2 <- glm(mux ~ treatment*day, data = df4)
+
+autoplot(mort.model2)
+
+
+mort.model3 <- glm(mux ~ treatment*day + day^2, data = df4)
+
+autoplot(mort.model3)
+
+# Does treatment affect mortality rate?
+anova(mort.model)
+
+#How do the different components of the model affect mortality rate?
+summary (mort.model)
+
+#These data, and the figure, show that mortality rate increases with age (which you would expect as flies age), but there was no effect of treatment on mortality rate, and no interaction between treatment and age in their combined effects on mortality rate.
