@@ -272,7 +272,7 @@ cvdPlot(displayColors(c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "
 #   scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
 #  theme_classic()))
 
-
+#Note the mean number of eggs are plotted not the total (because long-lived flies will obviously produce more eggs)
 (sp.ind.avg_fec<- ggplot(df2b,aes(x=age, y=avg_eggs, colour = treat)) +
     geom_point() +
     geom_smooth(method="lm") +
@@ -355,8 +355,11 @@ head(addThese)
     scale_shape_manual(values=c(17, 16, 15), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
     scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
     scale_fill_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
-    theme_classic())
+    theme_classic(base_size = 12))
 
+ggsave("Egg relationship.png", egg.relationship, width = 18, height = 10, units = "cm")
+
+ggsave("Egg relationship.svg", egg.relationship, width = 18, height = 10, units = "cm")
 
 #Add the offspring model to the figure
 
@@ -379,10 +382,12 @@ head(addThese)
     scale_shape_manual(values=c(17, 16, 15), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
     scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
     scale_fill_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
-    theme_classic())
+    theme_classic(base_size=12))
 
-ggsave("Egg relationship.png", egg.relationship, width = 16, height = 10, units = "cm")
+
 ggsave("Offspring relationship.png", offspring.relationship, width = 16, height = 10, units = "cm")
+
+ggsave("Offspring relationship.svg", offspring.relationship, width = 18, height = 10, units = "cm")
 
 #Determine the r2 values for each linear relationship
 
@@ -504,4 +509,211 @@ summary(offspring.T3r)
 
 
 #Overall the relationships still hold (though are quite a bit weaker) when only the individuals that reached day 50 are included in the models
+
+# Reviewer asked us to conduct the same analysis but placing greater emphasis on early-life egg/offspring production. Therefore, below is the same analysis except that early-life egg production and early-life offspring production are included are analysed. The relevant data are the 7d egg and offspring production in df2.
+
+#Add two new columns isolating mean egg and offspring production for the first 7 days for each female. (Note females that did not live as long as 7 days are excluded from this analysis)
+
+df3 <- df2 %>%
+  filter (exp_age > 6) %>% 
+  mutate (mean_early_egg = eggs_7d/7) %>% 
+  mutate (mean_early_offspring = off_7d/7)
+
+df3 <- df2 %>%
+  mutate(mean_early_egg = ifelse(exp_age < 7, eggs_7d / exp_age, eggs_7d / 7)) %>%
+  mutate(mean_early_offspring = ifelse(exp_age < 7, off_7d / exp_age, off_7d / 7))
+
+#create a new dataframe where T1 is first for figures (we will continue to use the original dataframe for models)
+df3b <- df3 %>% 
+  mutate(treat = relevel (treat, ref = "20% SYA", "100% SYA"))
+
+levels (df3b$treat)  
+
+#Compare early egg production and early offspring production
+
+## Early Eggs
+
+# Plot these new data and 
+#eggs
+(sp.ind.avg_fec<- ggplot(df3b,aes(x=age, y=mean_early_egg, colour = treat)) +
+    geom_point() +
+    geom_smooth(method="lm") +
+    labs(title="The relationship between longevity and early egg  production in Drosophila melanogaster
+females reared under three larval dietary regimes",x="Longevity (days)", y = "Mean early egg production", colour='Larval diet')+
+    scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    theme_classic())
+
+# Test relationship between each linear model
+
+early.egg.model1 <- lm(mean_early_egg ~ treat*age, data = df3)
+
+# Test if thorax should be included as an additional fixed effect
+
+#Filter out all the females that did not have the have their thorax measured
+df4 <- df3 %>% 
+  filter(!is.na(thorax))
+
+#Makes models with and without thorax
+early.egg.model2 <- lm(mean_early_egg ~ treat*age, data = df4)
+early.egg.model3 <- lm(mean_early_egg ~ treat*age*thorax, data = df4)
+early.egg.model4 <- lm(mean_early_egg ~ treat*age + thorax, data = df4)
+
+#Compare AIC values
+(egg.selection.table <- as.data.frame(
+  AICtab(
+    early.egg.model2,early.egg.model3, early.egg.model4,
+    weights = T, base = T, logLik = T))) 
+
+anova(early.egg.model2, early.egg.model4) #Model 4 is the best, and models that use thorax perform better than those that do not. However extensive testing showed very little difference in the predictions of model 1 and model 4, model 1 has more data (it includes individuals with no thorax measurements), and this whole analysis with early reproduction is to complement the above analysis (looking at whole-life reproduction) which did not include an effect of thorax. Therefore I will continue with model 1 (which does not include thorax as a fixed effect). Please not that a key result of model 4 is that thorax had a significant effect on early life egg production, we don't see this effect with whole-life egg production so it could be interesting.
+
+autoplot(early.egg.model1) # This plot shows 1) TL no humps or valleys so the line is an appropriate fit to the data; 2) TR most of the residuals fall on the expected pattern if there is normal distribution; 3) BL variance is mostly constant over all predicted values of the response variable, so assumption of equal variance is probably not violated, there is a possibility of a negative realtionship between the fitted values and the standardized residuals but very weak if there at all; 4) BR shows that a single point might be having a disproportionate influence on the patterns... perhaps this is worth highlighting in the main figure. That point has a high residual value (i.e. it is a big outlier). In addition it has a large leverage value (i.e. it has a large affect on the model that was fitted). Either of these values alone would not be a major cause for concern, but both together are a problem. The final figure on plot shows that that value has a cook's distance of greater than 1 which gives us some justification for excluding it, so long as we tailor our discussion and conclusions to both scenarios where that point is removed and not removed.
+
+anova(early.egg.model4) # no overall effect of age on early egg production, slight effect of treatment on the early egg production. Considerable interaction between the age and treatment
+
+summary(early.egg.model1) # treatment 3 has a reversed longevity-fecundity relationship compared to the other treatments
+
+#Add the egg model to the figure
+
+new.x<-expand.grid(age= seq (from = 7, to = 88, length.out = 10),
+                   treat = levels(df3b$treat))
+
+#use predict() to generate new y values
+new.y <- predict(early.egg.model1,newdata=new.x,interval = 'confidence')
+
+#Collect the new x and new y for plotting
+addThese<-data.frame(new.x,new.y)
+#change name from fit to match the original data (in this case EGGS)
+addThese<-dplyr::rename(addThese, mean_early_egg = fit)
+#check it worked
+head(addThese)
+
+(early.egg.relationship<- ggplot(df3b,aes(x=age, y=mean_early_egg, colour = treat)) +
+    geom_point(aes(shape = treat)) +
+    geom_smooth(data = addThese,
+                aes(ymin = lwr, ymax = upr, fill = treat, colour = treat),
+                stat = 'identity',show.legend = FALSE)+
+    labs(x="Longevity (days)", y = "Mean early egg production (per day)", colour = "Treatment", shape = "Treatment", fill = "Treatment")+
+    scale_shape_manual(values=c(17, 16, 15), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    scale_fill_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    theme_classic())
+
+# This is the completed figure to be used in the final paper.
+
+ggsave("Early egg relationship.png", early.egg.relationship, width = 16, height = 10, units = "cm")
+
+#Determine the r2 values for each linear relationship
+
+##Treatment 1
+early_treat1_df <- df3 %>% 
+  filter(treat_no == 1)
+
+early_egg.T1_model <- lm(mean_early_egg ~ age, data = early_treat1_df)
+summary(early_egg.T1_model)
+
+##Treatment 2
+early_treat2_df <- df3 %>% 
+  filter(treat_no == 2)
+
+early_egg.T2_model <- lm(mean_early_egg ~age, data = early_treat2_df)
+summary(early_egg.T2_model,digits = 5)
+
+##Treatment 3
+
+early_treat3_df <- df3 %>% 
+  filter(treat_no == 3)
+
+early_egg.T3_model <- lm(mean_early_egg ~age, data = early_treat3_df)
+summary(early_egg.T3_model,digits = 5)
+
+
+
+###### early offspring #####
+
+
+(sp.ind.avg_fec<- ggplot(df3b,aes(x=age, y=mean_early_offspring, colour = treat)) +
+    geom_point() +
+    geom_smooth(method="lm") +
+    labs(title="The relationship between longevity and early offspring  production in Drosophila melanogaster
+females reared under three larval dietary regimes",x="Longevity (days)", y = "Mean early offspring production", colour='Larval diet')+
+    scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    theme_classic())
+
+# Test relationship between each linear model
+
+early.offspring.model1 <- lm(mean_early_offspring ~ treat*age, data = df3)
+
+# Test if thorax should be included as an additional fixed effect
+
+
+#Makes models with and without thorax
+early.offspring.model2 <- lm(mean_early_offspring ~ treat*age, data = df4)
+early.offspring.model3 <- lm(mean_early_offspring ~ treat*age*thorax, data = df4)
+early.offspring.model4 <- lm(mean_early_offspring ~ treat*age + thorax, data = df4)
+
+#Compare AIC values
+(egg.selection.table <- as.data.frame(
+  AICtab(
+    early.offspring.model2,early.offspring.model3, early.offspring.model4,
+    weights = T, base = T, logLik = T))) 
+
+anova(early.offspring.model2, early.offspring.model4) #Model 4 is the best, and models that use thorax perform better than those that do not. However extensive testing showed very little difference in the predictions of model 1 and model 4, model 1 has more data (it includes individuals with no thorax measurements), and this whole analysis with early reproduction is to complement the above analysis (looking at whole-life reproduction) which did not include an effect of thorax. Therefore I will continue with model 1 (which does not include thorax as a fixed effect). Please not that a key result of model 4 is that thorax had a significant effect on early life egg production, we don't see this effect with whole-life egg production so it could be interesting.
+
+autoplot(early.offspring.model1) # This plot shows 1) TL no humps or valleys so the line is an appropriate fit to the data; 2) TR most of the residuals fall on the expected pattern if there is normal distribution; 3) BL variance is mostly constant over all predicted values of the response variable, so assumption of equal variance is probably not violated, there is a possibility of a negative realtionship between the fitted values and the standardized residuals but very weak if there at all; 4) BR shows that a single point might be having a disproportionate influence on the patterns... perhaps this is worth highlighting in the main figure. That point has a high residual value (i.e. it is a big outlier). In addition it has a large leverage value (i.e. it has a large affect on the model that was fitted). Either of these values alone would not be a major cause for concern, but both together are a problem. The final figure on plot shows that that value has a cook's distance of greater than 1 which gives us some justification for excluding it, so long as we tailor our discussion and conclusions to both scenarios where that point is removed and not removed.
+
+anova(early.offspring.model1) # no overall effect of age on early egg production, slight effect of treatment on the early egg production. Considerable interaction between the age and treatment
+
+summary(early.offspring.model1) # treatment 3 has a reversed longevity-fecundity relationship compared to the other treatments
+
+
+#Add the offspring model (without thorax included as an effect) to the figure
+
+new.x<-expand.grid(age= seq (from = 7, to = 88, length.out = 10),
+                   treat = levels(df3b$treat))
+
+#use predict() to generate new y values
+new.y <- predict(early.offspring.model1,newdata=new.x,interval = 'confidence')
+
+#Collect the new x and new y for plotting
+addThese<-data.frame(new.x,new.y)
+#change name from fit to match the original data (in this case EGGS)
+addThese<-dplyr::rename(addThese, mean_early_offspring = fit)
+#check it worked
+head(addThese)
+
+(early.offspring.relationship<- ggplot(df3b,aes(x=age, y=mean_early_offspring, colour = treat)) +
+    geom_point(aes(shape = treat)) +
+    geom_smooth(data = addThese,
+                aes(ymin = lwr, ymax = upr, fill = treat, colour = treat),
+                stat = 'identity',show.legend = FALSE)+
+    labs(x="Longevity (days)", y = "Mean early offspring production (per day)", colour = "Treatment", shape = "Treatment", fill = "Treatment")+
+    scale_shape_manual(values=c(17, 16, 15), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    scale_fill_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
+    theme_classic())
+
+# This is the completed figure to be used in the final paper.
+
+ggsave("Early offspring relationship.png", early.offspring.relationship, width = 16, height = 10, units = "cm")
+
+#Determine the r2 values for each linear relationship
+
+##Treatment 1
+
+early_offspring.T1_model <- lm(mean_early_offspring ~ age, data = early_treat1_df)
+summary(early_offspring.T1_model)
+
+##Treatment 2
+
+early_offspring.T2_model <- lm(mean_early_offspring ~age, data = early_treat2_df)
+summary(early_offspring.T2_model,digits = 5)
+
+##Treatment 3
+
+early_offspring.T3_model <- lm(mean_early_offspring ~age, data = early_treat3_df)
+summary(early_offspring.T3_model,digits = 5)
+
+
+
+
 
