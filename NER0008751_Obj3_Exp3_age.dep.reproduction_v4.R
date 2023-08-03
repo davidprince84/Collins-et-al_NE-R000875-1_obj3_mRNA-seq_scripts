@@ -225,7 +225,7 @@ summary(allEffects(egg.early.model1))
      geom_line() +
      geom_point()+
      labs(x="Time (days)", y = "Whole-life egg production", shape = "Treatment", colour = "Treatment")+
-     theme_classic() + 
+     theme_classic(base_size = 18) + 
      theme(legend.position = c(0.9,0.5))+
      scale_shape_manual(values=c(17, 16, 15), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
      scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
@@ -233,7 +233,10 @@ summary(allEffects(egg.early.model1))
  
  
   
-ggsave("Egg plot A.png", egg_plot3, width = 16, height = 10, units = "cm")
+ggsave("Egg plot A.png", egg_plot3, width = 8, height = 6, units = "cm")
+
+#To make figure panel
+ggsave("Egg plot A.svg", egg_plot3, width = 21, height = 15, units = "cm")
 
 #Find mean value per individual per treatment to quote in the paper
 df3%>% group_by(id,treat) %>% 
@@ -312,7 +315,7 @@ summary (egg.size.model3)
 
 LRS.df <- read_csv("NER0008751_Obj3_Exp3_LH_data_v2.csv")
 
-LRS.df <- filter (LRS.df2, exclude == "n")
+LRS.df <- filter (LRS.df, exclude == "n")
 
 
 #Ensure the correct number of ids are being calculated
@@ -339,11 +342,13 @@ LRS.df2 <- mutate(LRS.df, treat = relevel (treat, ref = "20% SYA", "100% SYA"))
     scale_y_continuous(breaks=seq(0,7000,50))+
     scale_x_discrete(limits = c("20% SYA", "100% SYA", "120% SYA"),
                      labels = c("L (20% SYA)", "M (100% SYA)", "H (120% SYA)"))+
-    theme_classic()+
+    theme_classic(base_size = 18)+
     theme(legend.position = "none"))
 
 
-ggsave("Egg plot B.png", egg_plot4, width = 16, height = 10, units = "cm")
+ggsave("Egg plot B.png", egg_plot4, width = 21, height = 15, units = "cm")
+
+ggsave("Egg plot B.svg", egg_plot4, width = 21, height = 15, units = "cm")
 
 
 LRS.egg.model1 <- lm(tot_eggs~treat, data = LRS.df)
@@ -485,7 +490,7 @@ plot(allEffects(off.early.model1))
     geom_line() +
     geom_point()+
     labs(x="Time (days)", y = "Whole-life offspring production", shape = "Treatment", colour = "Treatment")+
-    theme_classic() + 
+    theme_classic(base_size = 18) + 
     theme(legend.position = c(0.9,0.5))+
     scale_color_manual(values = c("#D55E00", "#0072B2", "#56B4E9"), labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
     scale_shape_manual(values=c(17, 16, 15),labels = c("L (20% SYA)","M (100% SYA)", "H (120% SYA)"))+
@@ -499,6 +504,9 @@ df3%>% group_by(id,treat) %>%
 
 
 ggsave("Offspring plot A.png", off_plot3, width = 16, height = 10, units = "cm")
+
+
+ggsave("Offspring plot A.svg", off_plot3, width = 21, height = 15, units = "cm")
 
 ## Test out the possible models
 
@@ -584,12 +592,13 @@ LRS.df %>% summarise(Unique_Elements = n_distinct(no)) #correct number of ids fo
     scale_y_continuous(breaks=seq(0,7000,50))+
     scale_x_discrete(limits = c("20% SYA", "100% SYA", "120% SYA"),
                      labels = c("L (20% SYA)", "M (100% SYA)", "H (120% SYA)"))+
-    theme_classic() + 
+    theme_classic(base_size = 18) + 
     theme(legend.position = "none"))
 
 
 ggsave("Offspring plot B.png", off_plot4, width = 16, height = 10, units = "cm")
 
+ggsave("Offspring plot B.svg", off_plot4, width = 21, height = 15, units = "cm")
 
 LRS.off.model1 <- lm(tot_offspring~treat, data = LRS.df)
 plot(LRS.off.model1) #Plot does not look good, try using a glm instead
